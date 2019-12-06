@@ -9,7 +9,7 @@ def main(cluster_name: str, asg_name: str, desired_count: int):
 
     instances = get_instances_to_remove(cluster_name, desired_change)
 
-    drain_instances(instances)
+    drain_instances(cluster_name, instances)
 
     terminate_instances(instances)
 

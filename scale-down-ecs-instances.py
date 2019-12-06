@@ -62,7 +62,8 @@ def drain_instances(cluster_name: str, instances: list):
 
     response = ecs.update_container_instances_state(
         cluster=cluster_name,
-        containerInstances=instances
+        containerInstances=instances,
+        status="DRAINING"
     )
 
     retries = 30

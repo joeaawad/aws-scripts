@@ -130,7 +130,7 @@ if __name__ == "__main__":
         "--expire", action="store_true", default=False,
         help="Set expiration of log group to --retention-days")
     parser.add_argument(
-        "--retention-days", default=30, help="Days to retain logs")
+        "--retention-days", type=int, default=30, help="Days to retain logs")
     parser.add_argument(
         "--overwrite", action="store_true", default=False,
         help="Force overwrite of expiration")

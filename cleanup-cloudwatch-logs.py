@@ -21,7 +21,7 @@ def get_log_groups(prefix: str) -> list:
             logGroupNamePrefix=prefix,
             nextToken=next_token)
 
-        if response["ResponseMetadata"]["HTTPStatusCode"] is not 200:
+        if response["ResponseMetadata"]["HTTPStatusCode"] != 200:
             print(response)
             exit(1)
 
@@ -65,7 +65,7 @@ def set_expiration(log_group_name: str, expire: bool, retention_days: int):
         response = client.put_retention_policy(
             logGroupName=log_group_name,
             retentionInDays=retention_days)
-        if response["ResponseMetadata"]["HTTPStatusCode"] is not 200:
+        if response["ResponseMetadata"]["HTTPStatusCode"] != 200:
             print(response)
             exit(1)
     else:
@@ -77,7 +77,7 @@ def check_delete_eligible(log_group_name: str) -> bool:
     streams_response = client.describe_log_streams(
         logGroupName=log_group_name, orderBy="LastEventTime", descending=True)
 
-    if streams_response["ResponseMetadata"]["HTTPStatusCode"] is not 200:
+    if streams_response["ResponseMetadata"]["HTTPStatusCode"] != 200:
         print(streams_response)
         exit(1)
 
@@ -89,7 +89,7 @@ def check_delete_eligible(log_group_name: str) -> bool:
     events_response = client.get_log_events(
         logGroupName=log_group_name, logStreamName=log_stream_name)
 
-    if events_response["ResponseMetadata"]["HTTPStatusCode"] is not 200:
+    if events_response["ResponseMetadata"]["HTTPStatusCode"] != 200:
         print(events_response)
         exit(1)
 
@@ -103,7 +103,7 @@ def delete_log_group(log_group_name: str, delete: bool):
     if delete:
         print(f"Deleting log group {log_group_name}")
         response = client.delete_log_group(logGroupName=log_group_name)
-        if response["ResponseMetadata"]["HTTPStatusCode"] is not 200:
+        if response["ResponseMetadata"]["HTTPStatusCode"] != 200:
             print(response)
             exit(1)
     else:

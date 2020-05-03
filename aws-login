@@ -1,0 +1,105 @@
+#!/bin/bash
+# Open a new browser tab as the specified AWS profile in the AWS Management
+# console. Add this script to you PATH in order to use it.
+set -eu
+
+# signin variables
+ACTION=login
+DESTINATION=https://console.aws.amazon.com/
+ISSUER=$USER
+SIGNIN_URL=https://signin.aws.amazon.com/federation
+
+# Arg parsing variables
+INCOGNITO=false
+USAGE="Usage: aws-login [-ilh] aws-profile-name
+
+Assume a role and launch the AWS Management console as that role.
+
+Options:
+    -h  Display this help
+    -l  List configured AWS profiles
+    -i  Use Chrome browser incognito mode
+"
+
+function parse_args(){
+    while (( "$#")); do
+        case "$1" in
+            -h)
+                echo "$USAGE"
+                exit 0
+                ;;
+            -i)
+                INCOGNITO=true
+                shift
+                ;;
+            -l)
+                aws configure list-profiles
+                exit 0
+                ;;
+            -*|--*=) # unsupported flags
+                echo "$USAGE"
+                echo "Error: Unsupported flag $1" >&2
+                exit 1
+                ;;
+            *) # ingest profile positional arg
+                PROFILE="$1"
+                shift
+                ;;
+        esac
+    done
+
+    set +u
+    if [ -z $PROFILE ]; then
+        echo "$USAGE"
+        echo "Error: Profile name is required"
+        exit 1
+    fi
+    set -u
+}
+
+parse_args $@
+
+# aws configure just exits 1 blindly without an error message if the desired
+# attribute isn't found
+set +e
+role_arn=$(aws configure get role_arn --profile $PROFILE)
+if [ -z $role_arn ]; then
+    echo "No role_arn was found, please check your AWS config"
+    exit 1
+fi
+
+source_profile=$(aws configure get source_profile --profile $PROFILE)
+if [ -z $source_profile ]; then
+    echo "No source_profile was found, please check your AWS config"
+    exit 1
+fi
+set -e
+
+assume_role_response=$(aws sts assume-role \
+    --role-arn $role_arn \
+    --role-session-name $ISSUER \
+    --profile $source_profile
+)
+
+session_id=$(jq -r .Credentials.AccessKeyId <<< "$assume_role_response")
+session_key=$(jq -r .Credentials.SecretAccessKey <<< "$assume_role_response")
+session_token=$(jq -r .Credentails.SessionToken <<< "$assume_role_response")
+
+get_signin_token_response=$(\
+    curl \
+        $SIGNIN_URL \
+        -G \
+        -s \
+        -d Action=getSigninToken \
+        --data-urlencode Session='{"sessionId": "'$session_id'", "sessionKey": "'$session_key'", "sessionToken": "'$session_token'"}'
+)
+
+signin_token=$(jq -r .SigninToken <<< "$get_signin_token_response")
+
+result="$SIGNIN_URL?Destination=$DESTINATION&Action=$ACTION&Issuer=$ISSUER&SigninToken=$signin_token"
+
+if [[ $INCOGNITO ]]; then
+    open -na "Google Chrome" --args --incognito $result
+else
+    open $result
+fi

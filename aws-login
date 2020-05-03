@@ -83,7 +83,7 @@ assume_role_response=$(aws sts assume-role \
 
 session_id=$(jq -r .Credentials.AccessKeyId <<< "$assume_role_response")
 session_key=$(jq -r .Credentials.SecretAccessKey <<< "$assume_role_response")
-session_token=$(jq -r .Credentails.SessionToken <<< "$assume_role_response")
+session_token=$(jq -r .Credentials.SessionToken <<< "$assume_role_response")
 
 get_signin_token_response=$(\
     curl \

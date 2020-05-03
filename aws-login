@@ -98,7 +98,7 @@ signin_token=$(jq -r .SigninToken <<< "$get_signin_token_response")
 
 result="$SIGNIN_URL?Destination=$DESTINATION&Action=$ACTION&Issuer=$ISSUER&SigninToken=$signin_token"
 
-if [[ $INCOGNITO ]]; then
+if [[ $INCOGNITO = true ]]; then
     open -na "Google Chrome" --args --incognito $result
 else
     open $result

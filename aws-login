@@ -1,6 +1,10 @@
 #!/bin/bash
 # Open a new browser tab as the specified AWS profile in the AWS Management
 # console. Add this script to you PATH in order to use it.
+
+# per https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_terms-and-concepts.html#iam-term-role-chaining
+# if you use one role to assume another role in your AWS profile, your 
+# browser session will only last 1 hour before it asks you to log in again.
 set -eu
 
 # signin variables

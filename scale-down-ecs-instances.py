@@ -1,8 +1,8 @@
 import argparse
 import boto3
 
-autoscaling = boto3.client('autoscaling')
-ecs = boto3.client('ecs')
+autoscaling = boto3.client("autoscaling")
+ecs = boto3.client("ecs")
 
 def main(cluster_name: str, asg_name: str, desired_count: int):
     desired_change = get_change(asg_name, desired_count)
@@ -21,13 +21,13 @@ def main(cluster_name: str, asg_name: str, desired_count: int):
 def get_change(asg_name: str, desired_count: int) -> int:
     asgs = autoscaling.describe_auto_scaling_groups(
         AutoScalingGroupNames=[asg_name]
-    )['AutoScalingGroups']
+    )["AutoScalingGroups"]
     if len(asgs) == 0:
         raise ValueError("Unable to find Auto Scaling Group")
     elif len(asgs) > 1:
         raise ValueError("More than one Auto Scaling Group was found")
 
-    desired_change = asgs[0]['DesiredCapacity'] - desired_count
+    desired_change = asgs[0]["DesiredCapacity"] - desired_count
 
     if desired_change < 0:
         raise ValueError(
@@ -41,19 +41,19 @@ def get_change(asg_name: str, desired_count: int) -> int:
 def get_instances_to_remove(cluster_name: str, desired_change: int) -> list:
     container_instance_arns = ecs.list_container_instances(
         cluster=cluster_name,
-    )['containerInstanceArns']
+    )["containerInstanceArns"]
 
     raw_instances = ecs.describe_container_instances(
         cluster=cluster_name,
         containerInstances=container_instance_arns
-    )['containerInstances']
+    )["containerInstances"]
 
-    sorted_instances = sorted(raw_instances, key = lambda i: i['registeredAt'])
+    sorted_instances = sorted(raw_instances, key = lambda i: i["registeredAt"])
 
     instances_to_remove = sorted_instances[:desired_change]
 
     instance_ids = [
-        instance['ec2InstanceId'] for instance in instances_to_remove]
+        instance["ec2InstanceId"] for instance in instances_to_remove]
 
     return instance_ids
 
@@ -72,9 +72,9 @@ def drain_instances(cluster_name: str, instances: list):
         instance_descriptions = ecs.describe_container_instances(
             cluster=cluster_name,
             containerInstances=instances
-        )['containerInstances']
+        )["containerInstances"]
 
-        if all(instance['runningTasksCount'] == 0
+        if all(instance["runningTasksCount"] == 0
                 for instance in instance_descriptions):
             break
 
@@ -97,12 +97,12 @@ def terminate_instance(instances: list):
             ShouldDecrementDesiredCapacity=True
         )
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Scale down ECS hosts')
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Scale down ECS hosts")
 
-    parser.add_argument('cluster_name', type=str)
-    parser.add_argument('asg_name', type=str)
-    parser.add_argument('desired_count', type=int)
+    parser.add_argument("cluster_name", type=str)
+    parser.add_argument("asg_name", type=str)
+    parser.add_argument("desired_count", type=int)
 
     args = parser.parse_args()
 

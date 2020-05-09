@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """Created by Joe Awad
 
 Set the expiration on cloudwatch logs that match a given prefix and delete
@@ -122,7 +121,8 @@ def main(prefix, expire, retention_days, overwrite, delete):
         if delete_eligible:
             delete_log_group(log_group_name, delete)
 
-if __name__ == "__main__":
+def parser():
+    """Parse command line arguments"""
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "prefix", help="Prefix of log groups such as '/aws/lambda'")
@@ -137,7 +137,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "--delete", action="store_true", default=False,
         help="Delete empty log groups")
-    args = parser.parse_args()
+    return parser.parse_args()
+
+if __name__ == "__main__":
+    args = parser()
 
     main(args.prefix, args.expire, args.retention_days, args.overwrite,
          args.delete)

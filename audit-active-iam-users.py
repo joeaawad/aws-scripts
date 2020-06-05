@@ -1,10 +1,19 @@
 """Created by Joe Awad
 
-Generate a csv of iam users with active access key or password and flags if
+Generate a csv of IAM users with active access key or password and flags if
 the user doesn't meet security standards.
+
+WARNING: per
+https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_getting-report.html
+AWS only refreshes the report every 4 hours so if you run this script to
+generate a report then make IAM changes and try rerunning the script, your
+changes will not be reflected until the old report has become over 4 hours old.
 """
+
 import boto3
+import datetime
 import pandas
+import time
 
 ALL_USERS_CSV = "all_users.csv"
 ACTIVE_USERS_CSV = "active_users.csv"
@@ -53,15 +62,26 @@ CREDENTIAL_CHECKS = [
     }
 ]
 
-def get_all_users():
-    """Generates credential report from IAM and writes to ALL_USERS_CSV"""
-    client = boto3.client("iam")
+def generate_credential_report(client: boto3.client):
+    """Trigger credential report generation then wait for completion"""
+    status = None
 
-    client.generate_credential_report()
+    while True:
+        status = client.generate_credential_report()["State"]
+
+        if status == "COMPLETE":
+            return
+        else:
+            time.sleep(2)
+
+def get_credential_report(client: boto3.client):
+    """Fetch and write credential report to CSV"""
     response = client.get_credential_report()
+
     with open(ALL_USERS_CSV, "wb+") as f:
         f.write(response["Content"])
-    print("{} created".format(ALL_USERS_CSV))
+
+    print(f"{ALL_USERS_CSV} created")
 
 # Pandas filter functions
 def get_last_seen_date(row: pandas.Series):
@@ -85,7 +105,7 @@ def check_unused_credential(row: pandas.Series, enabled: str,
                             last_used: str):
     """Check if the user has an active credential but it has never been used"""
     if row[enabled]:
-        if row[last_used] is pandas.np.nan:
+        if pandas.isnull(row[last_used]):
             return True
     return False
 
@@ -106,7 +126,7 @@ def needs_password_rotation(row: pandas.Series):
         return False
 
     next_rotation_date = pandas.to_datetime(row["password_next_rotation"])
-    if next_rotation_date <= pandas.datetime.today():
+    if next_rotation_date <= datetime.datetime.today():
         return True
     else:
         return False
@@ -120,7 +140,7 @@ def needs_access_key_rotation(row: pandas.Series):
         expiration_date = last_rotated + pandas.Timedelta(
             days=ACCESS_KEY_EXPIRATION_DAYS)
 
-        if expiration_date < pandas.datetime.today():
+        if expiration_date.tz_localize(None) < datetime.datetime.today():
             return True
         else:
             return False
@@ -206,7 +226,9 @@ def process_users():
     print(f"{ACTIVE_USERS_CSV} created")
 
 def main():
-    get_all_users()
+    client = boto3.client("iam")
+    generate_credential_report(client)
+    get_credential_report(client)
     process_users()
 
 if __name__ == '__main__':
